@@ -8,10 +8,8 @@ const state = {
 };
 
 const statusLabel = {
-  unread: "未読",
-  reading: "途中",
-  completed: "読了",
-  updated: "更新あり"
+  writing: "執筆中",
+  complete: "完結"
 };
 
 const updates = [
@@ -32,6 +30,7 @@ const updates = [
 window.addEventListener("hashchange", () => {
   state.route = parseRoute();
   render();
+  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
 });
 
 load();
