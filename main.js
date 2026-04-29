@@ -4,7 +4,26 @@ const state = {
   novels: [],
   route: parseRoute(),
   fontSize: Number(localStorage.getItem("yubo.fontSize") || 18),
-  lineHeight: Number(localStorage.getItem("yubo.lineHeight") || 2.1)
+  lineHeight: Number(localStorage.getItem("yubo.lineHeight") || 2.1),
+  fontFamily: localStorage.getItem("yubo.fontFamily") || "maru"
+};
+
+const fontOptions = {
+  maru: {
+    label: "まるゴシック",
+    description: "やわらかくて、かわいい雰囲気。",
+    stack: '"Zen Maru Gothic", "UD Digi Kyokasho N-R", "Yu Gothic", "Meiryo", system-ui, sans-serif'
+  },
+  mincho: {
+    label: "明朝",
+    description: "小説らしく、落ち着いた読み心地。",
+    stack: '"Yu Mincho", "Hiragino Mincho ProN", "BIZ UDPMincho", "Times New Roman", serif'
+  },
+  gothic: {
+    label: "ゴシック",
+    description: "くっきりしていて、長文でも読みやすい。",
+    stack: '"Yu Gothic", "Hiragino Sans", "Meiryo", system-ui, sans-serif'
+  }
 };
 
 const statusLabel = {
@@ -59,6 +78,7 @@ function navigate(path) {
 }
 
 function shell(content) {
+  applyFontFamily();
   return `
     <header class="topbar">
       <button class="brand" type="button" data-link="/">
@@ -68,6 +88,7 @@ function shell(content) {
         ${catImage("peek", "top-cat")}
         <button class="text-button" type="button" data-link="/">本棚</button>
         <button class="text-button" type="button" data-link="/updates">更新メモ</button>
+        <button class="text-button" type="button" data-link="/settings">設定</button>
       </div>
     </header>
     ${content}
@@ -78,6 +99,8 @@ function render() {
   const route = state.route;
   if (route.name === "updates") {
     app.innerHTML = shell(renderUpdates());
+  } else if (route.name === "settings") {
+    app.innerHTML = shell(renderSettings());
   } else if (route.name === "novel") {
     const novel = findNovel(route.novelId);
     app.innerHTML = shell(novel ? renderNovelDetail(novel) : notFound());
@@ -235,6 +258,34 @@ function renderUpdates() {
   `;
 }
 
+function renderSettings() {
+  return `
+    <main class="screen">
+      <section class="hero-row">
+        <div>
+          <p class="eyebrow">Settings</p>
+          <h1>読みやすさを選ぶ</h1>
+          <p class="muted">フォントはこの端末に保存されます。</p>
+        </div>
+        ${catImage("sit", "hero-cat")}
+      </section>
+
+      <section class="settings-panel">
+        <h2>フォント</h2>
+        <div class="font-choice-grid">
+          ${Object.entries(fontOptions).map(([key, option]) => `
+            <button class="font-choice ${state.fontFamily === key ? "active" : ""}" type="button" data-font-choice="${key}">
+              <span class="font-choice-title font-preview-${key}">${option.label}</span>
+              <span class="font-choice-sample font-preview-${key}">海辺の午後、静かなページをめくる。</span>
+              <span class="font-choice-description">${option.description}</span>
+            </button>
+          `).join("")}
+        </div>
+      </section>
+    </main>
+  `;
+}
+
 function cover(novel) {
   const image = coverImage(novel.cover);
   if (image) {
@@ -290,6 +341,14 @@ function bindActions() {
     element.addEventListener("click", () => navigate(element.dataset.link));
   });
 
+  app.querySelectorAll("[data-font-choice]").forEach((element) => {
+    element.addEventListener("click", () => {
+      state.fontFamily = element.dataset.fontChoice;
+      localStorage.setItem("yubo.fontFamily", state.fontFamily);
+      render();
+    });
+  });
+
   app.querySelectorAll("[data-font]").forEach((element) => {
     element.addEventListener("click", () => {
       state.fontSize = clamp(state.fontSize + Number(element.dataset.font), 15, 24);
@@ -331,4 +390,10 @@ function escapeAttr(value) {
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+function applyFontFamily() {
+  const option = fontOptions[state.fontFamily] || fontOptions.maru;
+  document.documentElement.style.setProperty("--app-family", option.stack);
+  document.documentElement.style.setProperty("--reader-family", option.stack);
 }
