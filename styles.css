@@ -23,7 +23,7 @@ body {
   background:
     radial-gradient(circle at top right, rgba(15, 61, 102, 0.08), transparent 34rem),
     var(--paper);
-  font-family: "Zen Maru Gothic", "UD Digi Kyokasho N-R", "Yu Gothic", "Hiragino Sans", "Meiryo", system-ui, sans-serif;
+  font-family: var(--app-family, "Zen Maru Gothic", "UD Digi Kyokasho N-R", "Yu Gothic", "Hiragino Sans", "Meiryo", system-ui, sans-serif);
   line-height: 1.75;
 }
 
@@ -356,7 +356,7 @@ h3 {
 
 .reader-body {
   white-space: pre-wrap;
-  font-family: "Zen Maru Gothic", "UD Digi Kyokasho N-R", "Yu Mincho", "Hiragino Mincho ProN", serif;
+  font-family: var(--reader-family, "Zen Maru Gothic", "UD Digi Kyokasho N-R", "Yu Mincho", "Hiragino Mincho ProN", serif);
   font-size: var(--reader-font, 18px);
   line-height: var(--reader-line, 2.1);
   font-weight: 500;
@@ -386,6 +386,71 @@ h3 {
 .updates {
   display: grid;
   gap: 14px;
+}
+
+.settings-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 22px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: var(--shadow);
+}
+
+.settings-panel h2 {
+  margin: 0 0 16px;
+  font-size: 20px;
+}
+
+.font-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.font-choice {
+  display: grid;
+  gap: 8px;
+  min-height: 178px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--ink);
+  text-align: left;
+}
+
+.font-choice:hover,
+.font-choice.active {
+  border-color: rgba(15, 61, 102, 0.38);
+  background: var(--blue-soft);
+}
+
+.font-choice-title {
+  color: var(--blue);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.font-preview-maru {
+  font-family: "Zen Maru Gothic", "UD Digi Kyokasho N-R", "Yu Gothic", "Meiryo", system-ui, sans-serif;
+}
+
+.font-preview-mincho {
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "BIZ UDPMincho", "Times New Roman", serif;
+}
+
+.font-preview-gothic {
+  font-family: "Yu Gothic", "Hiragino Sans", "Meiryo", system-ui, sans-serif;
+}
+
+.font-choice-sample {
+  font-size: 17px;
+  line-height: 1.8;
+}
+
+.font-choice-description {
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .note-card {
@@ -421,6 +486,10 @@ h3 {
 @media (max-width: 820px) {
   .shelf-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .font-choice-grid {
+    grid-template-columns: 1fr;
   }
 
   .detail-layout {
