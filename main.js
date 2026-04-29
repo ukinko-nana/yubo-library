@@ -237,6 +237,16 @@ function renderUpdates() {
 }
 
 function cover(novel) {
+  const image = coverImage(novel.cover);
+  if (image) {
+    return `
+      <div class="cover image-cover">
+        <img src="${image}" alt="">
+        <span class="status">${escapeHtml(statusLabel[novel.status] || novel.status)}</span>
+      </div>
+    `;
+  }
+
   const style = coverStyle(novel.cover);
   return `
     <div class="cover" style="${style}">
@@ -262,9 +272,18 @@ function coverStyle(name) {
     mist: "--cover-a:#dce7ed;--cover-b:#7895a9;--cover-c:#183c59;",
     night: "--cover-a:#eef1f5;--cover-b:#8895a4;--cover-c:#213247;",
     branch: "--cover-a:#edf3f3;--cover-b:#a8bab9;--cover-c:#637b7c;",
-    lake: "--cover-a:#f2f3ed;--cover-b:#b8c5c8;--cover-c:#536f83;"
+    lake: "--cover-a:#f2f3ed;--cover-b:#b8c5c8;--cover-c:#536f83;",
+    paper: "--cover-a:#f5efe4;--cover-b:#d8c6aa;--cover-c:#9a8567;",
+    flower: "--cover-a:#f4ece9;--cover-b:#d7b4ad;--cover-c:#a87772;"
   };
   return styles[name] || styles.mist;
+}
+
+function coverImage(name) {
+  const images = {
+    secondPart: "./assets/covers/second-part-cover.png"
+  };
+  return images[name] || "";
 }
 
 function bindActions() {
