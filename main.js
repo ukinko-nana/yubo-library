@@ -5,29 +5,34 @@ const state = {
   route: parseRoute(),
   fontSize: Number(localStorage.getItem("yubo.fontSize") || 18),
   lineHeight: Number(localStorage.getItem("yubo.lineHeight") || 2.1),
-  fontFamily: localStorage.getItem("yubo.fontFamily") || "maru",
+  fontFamily: localStorage.getItem("yubo.fontFamily") || "notoSerif",
   readingMode: localStorage.getItem("yubo.readingMode") || "horizontal",
   verticalPage: 0,
   verticalPageCount: 1
 };
 
 const fontOptions = {
-  maru: {
-    label: "まるゴシック",
-    description: "やわらかくて、かわいい雰囲気。",
-    stack: '"Zen Maru Gothic", "UD Digi Kyokasho N-R", "Yu Gothic", "Meiryo", system-ui, sans-serif'
+  notoSerif: {
+    label: "Noto Serif JP",
+    description: "落ち着いた本文向けの標準明朝です。",
+    stack: '"Noto Serif JP", "Yu Mincho", "Hiragino Mincho ProN", serif'
   },
-  mincho: {
-    label: "明朝",
-    description: "小説らしく、落ち着いた読み心地。",
-    stack: '"Yu Mincho", "Hiragino Mincho ProN", "BIZ UDPMincho", "Times New Roman", serif'
+  yuMincho: {
+    label: "游明朝",
+    description: "紙の小説に近い、端正な読み心地です。",
+    stack: '"Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif'
   },
-  gothic: {
-    label: "ゴシック",
-    description: "くっきりしていて、長文でも読みやすい。",
-    stack: '"Yu Gothic", "Hiragino Sans", "Meiryo", system-ui, sans-serif'
+  notoSans: {
+    label: "Noto Sans JP",
+    description: "くっきり読める、現代的なゴシックです。",
+    stack: '"Noto Sans JP", "Yu Gothic", "Hiragino Sans", "Meiryo", sans-serif'
   }
 };
+
+if (!fontOptions[state.fontFamily]) {
+  state.fontFamily = "notoSerif";
+  localStorage.setItem("yubo.fontFamily", state.fontFamily);
+}
 
 const statusLabel = {
   writing: "執筆中",
@@ -579,6 +584,7 @@ function coverImage(name) {
 
 function bindActions() {
   app.querySelectorAll("[data-link]").forEach((element) => {
+    element.classList.toggle("active", linkMatchesRoute(element.dataset.link));
     element.addEventListener("click", () => navigate(element.dataset.link));
   });
 
@@ -634,6 +640,22 @@ function findNovel(id) {
   return state.novels.find((novel) => novel.id === id);
 }
 
+function linkMatchesRoute(link) {
+  if (link === "/") {
+    return state.route.name === "shelf";
+  }
+
+  if (link === "/updates") {
+    return state.route.name === "updates";
+  }
+
+  if (link === "/settings") {
+    return state.route.name === "settings";
+  }
+
+  return false;
+}
+
 function notFound() {
   return `<main class="screen"><div class="empty">ページが見つかりません。</div></main>`;
 }
@@ -657,7 +679,6 @@ function clamp(value, min, max) {
 }
 
 function applyFontFamily() {
-  const option = fontOptions[state.fontFamily] || fontOptions.maru;
-  document.documentElement.style.setProperty("--app-family", option.stack);
+  const option = fontOptions[state.fontFamily] || fontOptions.notoSerif;
   document.documentElement.style.setProperty("--reader-family", option.stack);
 }
