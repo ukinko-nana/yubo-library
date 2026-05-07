@@ -177,6 +177,7 @@ h3 {
 .book-card {
   border: 0;
   background: transparent;
+  color: var(--ink);
   text-align: left;
 }
 
@@ -310,6 +311,7 @@ h3 {
   border: 0;
   border-bottom: 1px solid var(--line);
   background: transparent;
+  color: var(--ink);
   padding: 16px;
   text-align: left;
 }
@@ -338,11 +340,21 @@ h3 {
   width: min(760px, calc(100% - 36px));
 }
 
+.reader-screen.vertical-mode {
+  width: min(1060px, calc(100% - 36px));
+  min-height: calc(100vh - 64px);
+  padding: 18px 0 18px;
+}
+
 .reader-header {
   position: relative;
   margin-bottom: 26px;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--line);
+}
+
+.vertical-mode .reader-header {
+  display: none;
 }
 
 .reader-cat {
@@ -355,11 +367,93 @@ h3 {
 }
 
 .reader-body {
-  white-space: pre-wrap;
   font-family: var(--reader-family, "Zen Maru Gothic", "UD Digi Kyokasho N-R", "Yu Mincho", "Hiragino Mincho ProN", serif);
   font-size: var(--reader-font, 18px);
   line-height: var(--reader-line, 2.1);
   font-weight: 500;
+}
+
+.reader-body.vertical {
+  position: relative;
+  height: calc(100vh - 190px);
+  min-height: 420px;
+  overflow: hidden;
+  padding: 28px 24px;
+  border: 1px solid rgba(221, 227, 234, 0.88);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: 0 16px 40px rgba(21, 30, 39, 0.05);
+}
+
+.reader-page-content {
+  display: block;
+}
+
+.reader-body.vertical .reader-page-content {
+  position: absolute;
+  top: 28px;
+  right: 24px;
+  bottom: 28px;
+  left: 24px;
+  height: auto;
+  width: auto;
+  display: block;
+  writing-mode: horizontal-tb;
+}
+
+.reader-body.vertical .reader-page {
+  display: none;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.reader-body.vertical .reader-page.active,
+.reader-body.vertical .reader-page.measuring {
+  display: block;
+}
+
+.reader-paragraph {
+  margin: 0 0 1.15em;
+  white-space: pre-wrap;
+}
+
+.reader-body.vertical .reader-paragraph {
+  margin: 0 0 0 1.15em;
+}
+
+.reader-illustration {
+  margin: 28px 0;
+  break-inside: avoid;
+}
+
+.reader-body.vertical .reader-illustration {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  writing-mode: horizontal-tb;
+}
+
+.reader-illustration img {
+  display: block;
+  width: 100%;
+  max-width: min(82%, 520px);
+  max-height: 78%;
+  object-fit: contain;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 16px 40px rgba(21, 30, 39, 0.08);
+}
+
+.reader-illustration figcaption {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
 }
 
 .reader-controls {
@@ -376,6 +470,27 @@ h3 {
   background: rgba(255, 255, 255, 0.9);
   box-shadow: var(--shadow);
   backdrop-filter: blur(16px);
+}
+
+.vertical-mode .reader-controls {
+  margin-top: 16px;
+}
+
+.page-control-group {
+  align-items: center;
+}
+
+.page-indicator {
+  min-width: 56px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.45;
 }
 
 .control-group {
@@ -396,18 +511,28 @@ h3 {
   box-shadow: var(--shadow);
 }
 
+.settings-panel + .settings-panel {
+  margin-top: 18px;
+}
+
 .settings-panel h2 {
   margin: 0 0 16px;
   font-size: 20px;
 }
 
-.font-choice-grid {
+.font-choice-grid,
+.reading-choice-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
 
-.font-choice {
+.reading-choice-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.font-choice,
+.reading-choice {
   display: grid;
   gap: 8px;
   min-height: 178px;
@@ -419,13 +544,20 @@ h3 {
   text-align: left;
 }
 
+.reading-choice {
+  min-height: 118px;
+}
+
 .font-choice:hover,
-.font-choice.active {
+.font-choice.active,
+.reading-choice:hover,
+.reading-choice.active {
   border-color: rgba(15, 61, 102, 0.38);
   background: var(--blue-soft);
 }
 
-.font-choice-title {
+.font-choice-title,
+.reading-choice-title {
   color: var(--blue);
   font-size: 20px;
   font-weight: 800;
@@ -448,7 +580,8 @@ h3 {
   line-height: 1.8;
 }
 
-.font-choice-description {
+.font-choice-description,
+.reading-choice-description {
   color: var(--muted);
   font-size: 13px;
 }
@@ -488,7 +621,8 @@ h3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .font-choice-grid {
+  .font-choice-grid,
+  .reading-choice-grid {
     grid-template-columns: 1fr;
   }
 
@@ -532,6 +666,19 @@ h3 {
   .reader-cat,
   .note-cat {
     display: none;
+  }
+
+  .reader-body.vertical {
+    height: calc(100vh - 220px);
+    min-height: 360px;
+    padding: 22px 18px;
+  }
+
+  .reader-body.vertical .reader-page-content {
+    top: 22px;
+    right: 18px;
+    bottom: 22px;
+    left: 18px;
   }
 
   .reader-controls {

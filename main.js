@@ -5,7 +5,10 @@ const state = {
   route: parseRoute(),
   fontSize: Number(localStorage.getItem("yubo.fontSize") || 18),
   lineHeight: Number(localStorage.getItem("yubo.lineHeight") || 2.1),
-  fontFamily: localStorage.getItem("yubo.fontFamily") || "maru"
+  fontFamily: localStorage.getItem("yubo.fontFamily") || "maru",
+  readingMode: localStorage.getItem("yubo.readingMode") || "horizontal",
+  verticalPage: 0,
+  verticalPageCount: 1
 };
 
 const fontOptions = {
@@ -118,6 +121,10 @@ function render() {
   }
 
   bindActions();
+
+  if (route.name === "read") {
+    setupVerticalPager();
+  }
 }
 
 function renderShelf() {
@@ -200,9 +207,10 @@ function renderReader(novel, episode) {
   const index = novel.chapters.findIndex((chapter) => chapter.id === episode.id);
   const prev = novel.chapters[index - 1];
   const next = novel.chapters[index + 1];
+  const isVertical = state.readingMode === "vertical";
 
   return `
-    <main class="screen reader-screen">
+    <main class="screen reader-screen ${isVertical ? "vertical-mode" : ""}">
       <header class="reader-header">
         <p class="eyebrow">${index + 1}話 / ${novel.chapters.length}話</p>
         <h1>${escapeHtml(episode.title)}</h1>
@@ -210,7 +218,9 @@ function renderReader(novel, episode) {
         ${catImage("sleep", "reader-cat")}
       </header>
 
-      <article class="reader-body">${escapeHtml(episode.body)}</article>
+      <article class="reader-body ${isVertical ? "vertical" : "horizontal"}">
+        <div class="reader-page-content">${renderReaderBody(novel, episode)}</div>
+      </article>
 
       <nav class="reader-controls" aria-label="読書操作">
         <div class="control-group">
@@ -218,7 +228,15 @@ function renderReader(novel, episode) {
           <button class="icon-button" type="button" data-font="1">A+</button>
           <button class="icon-button" type="button" data-line="-0.1">行間-</button>
           <button class="icon-button" type="button" data-line="0.1">行間+</button>
+          <button class="icon-button" type="button" data-reading-mode="${isVertical ? "horizontal" : "vertical"}">${isVertical ? "横読み" : "縦読み"}</button>
         </div>
+        ${isVertical ? `
+          <div class="control-group page-control-group">
+            <button class="text-button" type="button" data-page-turn="-1">前頁</button>
+            <span class="page-indicator" data-page-indicator>1 / 1</span>
+            <button class="text-button primary" type="button" data-page-turn="1">次頁</button>
+          </div>
+        ` : ""}
         <div class="control-group">
           ${prev ? `<button class="text-button" type="button" data-link="/read/${escapeAttr(novel.id)}/${escapeAttr(prev.id)}">前の話</button>` : ""}
           <button class="text-button" type="button" data-link="/episodes/${escapeAttr(novel.id)}">話一覧</button>
@@ -271,6 +289,20 @@ function renderSettings() {
       </section>
 
       <section class="settings-panel">
+        <h2>読み方向</h2>
+        <div class="reading-choice-grid">
+          <button class="reading-choice ${state.readingMode === "horizontal" ? "active" : ""}" type="button" data-reading-mode="horizontal">
+            <span class="reading-choice-title">横読み</span>
+            <span class="reading-choice-description">いつものWebページのように、上から下へ読みます。</span>
+          </button>
+          <button class="reading-choice ${state.readingMode === "vertical" ? "active" : ""}" type="button" data-reading-mode="vertical">
+            <span class="reading-choice-title">縦読み</span>
+            <span class="reading-choice-description">右から左へ流れる、文庫らしい読み方です。</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="settings-panel">
         <h2>フォント</h2>
         <div class="font-choice-grid">
           ${Object.entries(fontOptions).map(([key, option]) => `
@@ -284,6 +316,215 @@ function renderSettings() {
       </section>
     </main>
   `;
+}
+
+function renderReaderBody(novel, episode) {
+  const illustrations = readerIllustrations(novel, episode);
+  const illustrationsByParagraph = new Map();
+
+  illustrations.forEach((illustration) => {
+    const afterParagraph = Number(illustration.afterParagraph || 1);
+    const list = illustrationsByParagraph.get(afterParagraph) || [];
+    list.push(illustration);
+    illustrationsByParagraph.set(afterParagraph, list);
+  });
+
+  const paragraphs = String(episode.body || "")
+    .split(/\n+/)
+    .filter((paragraph) => paragraph.trim());
+
+  return paragraphs.map((paragraph, index) => {
+    const paragraphNumber = index + 1;
+    const figures = (illustrationsByParagraph.get(paragraphNumber) || [])
+      .map(renderIllustration)
+      .join("");
+
+    return `<p class="reader-paragraph">${escapeHtml(paragraph)}</p>${figures}`;
+  }).join("");
+}
+
+function setupVerticalPager() {
+  if (state.readingMode !== "vertical") {
+    state.verticalPage = 0;
+    state.verticalPageCount = 1;
+    return;
+  }
+
+  const paginate = () => {
+    const viewport = app.querySelector(".reader-body.vertical");
+    const content = app.querySelector(".reader-body.vertical .reader-page-content");
+    if (!viewport || !content) {
+      return;
+    }
+
+    paginateVerticalContent(viewport, content);
+    const pageWidth = verticalPageWidth(viewport);
+    state.verticalPageCount = Math.max(1, content.querySelectorAll(".reader-page").length);
+    state.verticalPage = clamp(state.verticalPage, 0, state.verticalPageCount - 1);
+    applyVerticalPage();
+  };
+
+  paginate();
+  setTimeout(paginate, 0);
+}
+
+function paginateVerticalContent(viewport, content) {
+  if (content.dataset.paginated === "true") {
+    return;
+  }
+
+  const blocks = Array.from(content.children);
+  const pageWidth = verticalPageWidth(viewport);
+  content.innerHTML = "";
+
+  let page = createReaderPage(content);
+
+  blocks.forEach((block) => {
+    if (block.classList.contains("reader-illustration")) {
+      if (pageHasContent(page)) {
+        page = createReaderPage(content);
+      }
+      page.dataset.pageKind = "illustration";
+      page.appendChild(block);
+      page = createReaderPage(content);
+      return;
+    }
+
+    const segments = paragraphSegments(block.textContent || "");
+    segments.forEach((segment) => {
+      const paragraph = document.createElement("p");
+      paragraph.className = "reader-paragraph";
+      paragraph.textContent = segment;
+      page.appendChild(paragraph);
+
+      if (page.scrollWidth > pageWidth && page.children.length > 1) {
+        paragraph.remove();
+        page = createReaderPage(content);
+        page.appendChild(paragraph);
+      }
+    });
+  });
+
+  if (!pageHasContent(page) && content.children.length > 1) {
+    page.remove();
+  }
+
+  content.dataset.paginated = "true";
+}
+
+function createReaderPage(content) {
+  const page = document.createElement("div");
+  page.className = "reader-page measuring";
+  content.appendChild(page);
+  return page;
+}
+
+function pageHasContent(page) {
+  return page.children.length > 0 || page.textContent.trim();
+}
+
+function paragraphSegments(text) {
+  const normalized = text.trim();
+  if (!normalized) {
+    return [];
+  }
+
+  const sentences = normalized.match(/[^。！？!?]+[。！？!?」』）)]*|.+$/g) || [normalized];
+  const segments = [];
+
+  sentences.forEach((sentence) => {
+    if (sentence.length <= 42) {
+      segments.push(sentence);
+      return;
+    }
+
+    for (let index = 0; index < sentence.length; index += 42) {
+      segments.push(sentence.slice(index, index + 42));
+    }
+  });
+
+  return segments;
+}
+
+function verticalPageWidth(viewport) {
+  const styles = getComputedStyle(viewport);
+  const paddingLeft = Number.parseFloat(styles.paddingLeft) || 0;
+  const paddingRight = Number.parseFloat(styles.paddingRight) || 0;
+  return Math.max(1, viewport.clientWidth - paddingLeft - paddingRight);
+}
+
+function applyVerticalPage() {
+  const viewport = app.querySelector(".reader-body.vertical");
+  const content = app.querySelector(".reader-body.vertical .reader-page-content");
+  const indicator = app.querySelector("[data-page-indicator]");
+  if (!viewport || !content) {
+    return;
+  }
+
+  content.querySelectorAll(".reader-page").forEach((page, index) => {
+    page.classList.remove("measuring");
+    page.classList.toggle("active", index === state.verticalPage);
+  });
+
+  app.querySelectorAll("[data-page-turn]").forEach((button) => {
+    const direction = Number(button.dataset.pageTurn);
+    button.disabled = direction < 0
+      ? state.verticalPage <= 0
+      : state.verticalPage >= state.verticalPageCount - 1;
+  });
+
+  if (indicator) {
+    indicator.textContent = `${state.verticalPage + 1} / ${state.verticalPageCount}`;
+  }
+}
+
+function renderIllustration(illustration) {
+  const src = illustrationSrc(illustration.src);
+  if (!src) {
+    return "";
+  }
+
+  const caption = illustration.caption
+    ? `<figcaption>${escapeHtml(illustration.caption)}</figcaption>`
+    : "";
+
+  return `
+    <figure class="reader-illustration">
+      <img src="${escapeHtml(src)}" alt="${escapeHtml(illustration.alt || "")}">
+      ${caption}
+    </figure>
+  `;
+}
+
+function readerIllustrations(novel, episode) {
+  if (Array.isArray(episode.illustrations) && episode.illustrations.length) {
+    return episode.illustrations;
+  }
+
+  if (novel.id === "novel-1777457907420" && episode.id === "episode-1") {
+    return [
+      {
+        afterParagraph: 3,
+        src: "./assets/cat-books.png",
+        alt: "本のそばにいる猫",
+        caption: "挿絵サンプル"
+      }
+    ];
+  }
+
+  return [];
+}
+
+function illustrationSrc(src) {
+  if (!src) {
+    return "";
+  }
+
+  if (/^(https?:)?\/\//.test(src) || src.startsWith("./") || src.startsWith("/")) {
+    return src;
+  }
+
+  return `./assets/${src}`;
 }
 
 function cover(novel) {
@@ -349,10 +590,32 @@ function bindActions() {
     });
   });
 
+  app.querySelectorAll("[data-reading-mode]").forEach((element) => {
+    element.addEventListener("click", () => {
+      state.readingMode = element.dataset.readingMode === "vertical" ? "vertical" : "horizontal";
+      localStorage.setItem("yubo.readingMode", state.readingMode);
+      state.verticalPage = 0;
+      render();
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    });
+  });
+
+  app.querySelectorAll("[data-page-turn]").forEach((element) => {
+    element.addEventListener("click", () => {
+      state.verticalPage = clamp(
+        state.verticalPage + Number(element.dataset.pageTurn),
+        0,
+        state.verticalPageCount - 1
+      );
+      applyVerticalPage();
+    });
+  });
+
   app.querySelectorAll("[data-font]").forEach((element) => {
     element.addEventListener("click", () => {
       state.fontSize = clamp(state.fontSize + Number(element.dataset.font), 15, 24);
       localStorage.setItem("yubo.fontSize", state.fontSize);
+      state.verticalPage = 0;
       render();
     });
   });
@@ -361,6 +624,7 @@ function bindActions() {
     element.addEventListener("click", () => {
       state.lineHeight = clamp(Number((state.lineHeight + Number(element.dataset.line)).toFixed(1)), 1.7, 2.6);
       localStorage.setItem("yubo.lineHeight", state.lineHeight);
+      state.verticalPage = 0;
       render();
     });
   });
